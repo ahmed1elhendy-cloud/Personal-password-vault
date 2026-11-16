@@ -17,6 +17,7 @@ public partial class MainPage : ContentPage
         _services = services;
         _vaultListView = new VaultListView(viewModel);
         _vaultListView.AddRequested += OnAddRequested;
+        _vaultListView.EntrySelected += OnEntrySelected;
         PageContent.Children.Add(_vaultListView);
 
         ToolbarItems.Add(new ToolbarItem
@@ -38,5 +39,12 @@ public partial class MainPage : ContentPage
     private async void OnAddRequested(object? sender, EventArgs e)
     {
         await Navigation.PushAsync(_services.GetRequiredService<EntryEditPage>());
+    }
+
+    private async void OnEntrySelected(object? sender, VaultEntrySelectedEventArgs e)
+    {
+        var page = _services.GetRequiredService<EntryDetailPage>();
+        page.LoadEntry(e.Entry);
+        await Navigation.PushAsync(page);
     }
 }

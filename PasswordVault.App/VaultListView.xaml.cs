@@ -12,6 +12,7 @@ public partial class VaultListView : ContentView
     }
 
     public event EventHandler? AddRequested;
+    public event EventHandler<VaultEntrySelectedEventArgs>? EntrySelected;
 
     public void Refresh() => _viewModel.Refresh();
 
@@ -27,4 +28,17 @@ public partial class VaultListView : ContentView
     {
         AddRequested?.Invoke(this, EventArgs.Empty);
     }
+
+    private void OnEntryTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Grid { BindingContext: VaultListEntryItem item })
+        {
+            EntrySelected?.Invoke(this, new VaultEntrySelectedEventArgs(item.Entry));
+        }
+    }
+}
+
+public sealed class VaultEntrySelectedEventArgs(PasswordVault.Core.VaultEntry entry) : EventArgs
+{
+    public PasswordVault.Core.VaultEntry Entry { get; } = entry;
 }

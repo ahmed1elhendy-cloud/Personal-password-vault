@@ -4,14 +4,117 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Add entry">
-    <VerticalStackLayout
-        Padding="24"
-        HorizontalOptions="Center"
-        Spacing="12"
-        VerticalOptions="Center">
-        <Label
-            FontSize="18"
-            Text="Entry editing will be added in Task 5."
-            HorizontalTextAlignment="Center" />
-    </VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+            <Entry
+                x:Name="TitleEntry"
+                Placeholder="Title" />
+            <Picker
+                x:Name="CategoryPicker"
+                Title="Category" />
+            <Entry
+                x:Name="WebsiteEntry"
+                Keyboard="Url"
+                Placeholder="Website" />
+            <Entry
+                x:Name="UsernameEntry"
+                Placeholder="Username" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Entry
+                    x:Name="PasswordEntry"
+                    IsPassword="True"
+                    Placeholder="Password" />
+                <Button
+                    Grid.Column="1"
+                    Clicked="OnGeneratorOptionsClicked"
+                    Text="Generate" />
+            </Grid>
+            <Border
+                x:Name="GeneratorPanel"
+                IsVisible="False"
+                Padding="12"
+                Stroke="#D7E1E4">
+                <VerticalStackLayout Spacing="8">
+                    <Entry
+                        x:Name="GeneratorLengthEntry"
+                        Keyboard="Numeric"
+                        Text="20"
+                        Placeholder="Length (8-64)" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Switch x:Name="IncludeLowercaseSwitch" IsToggled="True" />
+                        <Label Text="Lowercase" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="8">
+                        <Switch x:Name="IncludeUppercaseSwitch" IsToggled="True" />
+                        <Label Text="Uppercase" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="8">
+                        <Switch x:Name="IncludeDigitsSwitch" IsToggled="True" />
+                        <Label Text="Digits" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="8">
+                        <Switch x:Name="IncludeSymbolsSwitch" IsToggled="True" />
+                        <Label Text="Symbols" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Button
+                        BackgroundColor="#0B6E8F"
+                        Clicked="OnGenerateClicked"
+                        Text="Generate password"
+                        TextColor="White" />
+                </VerticalStackLayout>
+            </Border>
+            <Editor
+                x:Name="NotesEntry"
+                AutoSize="TextChanges"
+                MinimumHeightRequest="100"
+                Placeholder="Notes" />
+            <Label
+                FontAttributes="Bold"
+                Text="Custom fields" />
+            <VerticalStackLayout
+                x:Name="CustomFieldsList"
+                Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <VerticalStackLayout
+                            Padding="12"
+                            Spacing="8">
+                            <Entry
+                                Placeholder="Field name"
+                                Text="{Binding Name}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Entry
+                                    IsPassword="{Binding IsHidden}"
+                                    Placeholder="Field value"
+                                    Text="{Binding Value}" />
+                                <Button
+                                    Grid.Column="1"
+                                    Clicked="OnRemoveFieldClicked"
+                                    Text="Remove" />
+                            </Grid>
+                            <HorizontalStackLayout Spacing="8">
+                                <Switch IsToggled="{Binding IsHidden}" />
+                                <Label Text="Hidden" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+            <Button
+                Clicked="OnAddFieldClicked"
+                Text="Add field" />
+            <Button
+                x:Name="DeleteButton"
+                BackgroundColor="#B42318"
+                Clicked="OnDeleteClicked"
+                IsVisible="False"
+                Text="Delete"
+                TextColor="White" />
+            <Button
+                BackgroundColor="#0B6E8F"
+                Clicked="OnSaveClicked"
+                Text="Save"
+                TextColor="White" />
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

@@ -189,6 +189,7 @@ public sealed class VaultListEntryItem
 {
     public VaultListEntryItem(VaultEntry entry, Category? category)
     {
+        Entry = entry;
         Title = entry.Title;
         Username = entry.Username;
         CategoryBackgroundColor = ParseColor(category?.BackgroundHex, "#EAF4F6");
@@ -196,6 +197,7 @@ public sealed class VaultListEntryItem
         IconGlyph = GetIconGlyph(category?.IconKey);
     }
 
+    public VaultEntry Entry { get; }
     public string Title { get; }
     public string Username { get; }
     public Color CategoryBackgroundColor { get; }
