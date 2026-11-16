@@ -115,6 +115,39 @@ public sealed class VaultService
         _data = data;
     }
 
+    internal bool HasSameKeyParameters(ReadOnlySpan<byte> file)
+    {
+        var key = _key ?? throw new InvalidOperationException("The vault is locked.");
+        return VaultCodec.SameKeyParameters(key, file);
+    }
+
+    internal VaultData DecryptWithCurrentKey(ReadOnlySpan<byte> file)
+    {
+        var key = _key ?? throw new InvalidOperationException("The vault is locked.");
+        return VaultCodec.Decrypt(file, key);
+    }
+
+    internal byte[] EncryptWithCurrentKey(VaultData data)
+    {
+        var key = _key ?? throw new InvalidOperationException("The vault is locked.");
+        return VaultCodec.Encrypt(data, key);
+    }
+
+    internal void CommitSyncedState(VaultData data, byte[] encryptedFile, VaultKey? adoptedKey)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(encryptedFile);
+        var currentKey = _key ?? throw new InvalidOperationException("The vault is locked.");
+
+        _store.WriteAll(encryptedFile);
+        _data = data;
+        if (adoptedKey is not null)
+        {
+            _key = adoptedKey;
+            currentKey.Dispose();
+        }
+    }
+
     public void Lock()
     {
         if (IsLocked)

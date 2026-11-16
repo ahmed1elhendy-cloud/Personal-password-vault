@@ -46,6 +46,13 @@ public static class VaultCodec
         return DeriveKey(password, header.Salt, header.Kdf);
     }
 
+    public static bool SameKeyParameters(VaultKey key, ReadOnlySpan<byte> vaultFile)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        var header = ParseHeader(vaultFile);
+        return key.HasSameParameters(header.Salt, header.Kdf);
+    }
+
     public static byte[] Encrypt(VaultData data, VaultKey key)
     {
         ArgumentNullException.ThrowIfNull(data);
