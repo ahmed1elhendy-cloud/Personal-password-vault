@@ -91,6 +91,16 @@ public sealed class VaultService
         _store.WriteAll(VaultCodec.Encrypt(Data, key));
     }
 
+    public void VerifyPassword(string password)
+    {
+        ArgumentNullException.ThrowIfNull(password);
+        EnsureUnlocked();
+
+        var file = _store.ReadAll();
+        using var key = VaultCodec.OpenKey(password, file);
+        _ = VaultCodec.Decrypt(file, key);
+    }
+
     public void Lock()
     {
         if (IsLocked)

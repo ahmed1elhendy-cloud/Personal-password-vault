@@ -20,6 +20,7 @@ public static class MauiProgram
         builder.Services.AddTransient<VaultListViewModel>();
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<CsvExportPage>();
         builder.Services.AddTransient<CategoriesPage>();
         builder.Services.AddTransient<EntryDetailPage>();
         builder.Services.AddTransient<EntryEditPage>();

@@ -13,5 +13,13 @@
             Clicked="OnCategoriesClicked"
             HorizontalOptions="Fill"
             Text="Manage categories" />
+        <Button
+            Clicked="OnImportCsvClicked"
+            HorizontalOptions="Fill"
+            Text="Import CSV" />
+        <Button
+            Clicked="OnExportCsvClicked"
+            HorizontalOptions="Fill"
+            Text="Export CSV" />
     </VerticalStackLayout>
 </ContentPage>

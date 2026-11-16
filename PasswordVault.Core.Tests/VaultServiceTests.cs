@@ -105,6 +105,22 @@ public sealed class VaultServiceTests
     }
 
     [Fact]
+    public void VerifyPasswordDoesNotChangeUnlockedVault()
+    {
+        var service = CreateService();
+        service.Create(Password);
+        service.Data.Entries.Add(CreateEntry());
+        var expectedData = VaultJson.Serialize(service.Data);
+
+        Assert.Throws<WrongPasswordException>(() => service.VerifyPassword("incorrect password"));
+
+        service.VerifyPassword(Password);
+
+        Assert.False(service.IsLocked);
+        Assert.Equal(expectedData, VaultJson.Serialize(service.Data));
+    }
+
+    [Fact]
     public void RestoreFromFileAdoptsFileAndItsKey()
     {
         var sourceStore = new MemoryVaultStore();
