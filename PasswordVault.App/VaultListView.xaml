@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="PasswordVault.App.VaultListView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    <Grid
+        Padding="16"
+        RowDefinitions="Auto,Auto,*"
+        RowSpacing="12">
+        <SearchBar
+            Grid.Row="0"
+            Placeholder="Search title, website, or username"
+            Text="{Binding SearchText}" />
+        <CollectionView
+            Grid.Row="1"
+            HeightRequest="50"
+            ItemsSource="{Binding Categories}"
+            ItemsLayout="HorizontalList"
+            SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Button
+                        Margin="0,0,8,0"
+                        Padding="14,6"
+                        BackgroundColor="{Binding BackgroundColor}"
+                        BorderColor="{Binding BorderColor}"
+                        BorderWidth="{Binding BorderWidth}"
+                        Clicked="OnCategoryClicked"
+                        CornerRadius="18"
+                        Text="{Binding Name}"
+                        TextColor="{Binding TextColor}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <Grid Grid.Row="2">
+            <CollectionView ItemsSource="{Binding Entries}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label
+                        HorizontalOptions="Center"
+                        Text="No matching entries"
+                        TextColor="#52666E"
+                        VerticalOptions="Center" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid
+                            Padding="4,8"
+                            ColumnDefinitions="52,*"
+                            RowDefinitions="Auto,Auto">
+                            <Border
+                                Grid.RowSpan="2"
+                                Padding="0"
+                                BackgroundColor="{Binding CategoryBackgroundColor}"
+                                HeightRequest="44"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 12"
+                                VerticalOptions="Center"
+                                WidthRequest="44">
+                                <Label
+                                    FontSize="20"
+                                    HorizontalOptions="Center"
+                                    Text="{Binding IconGlyph}"
+                                    TextColor="{Binding CategoryTextColor}"
+                                    VerticalOptions="Center" />
+                            </Border>
+                            <Label
+                                Grid.Column="1"
+                                FontAttributes="Bold"
+                                FontSize="16"
+                                Text="{Binding Title}"
+                                TextColor="#17252B" />
+                            <Label
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                FontSize="13"
+                                Text="{Binding Username}"
+                                TextColor="#52666E" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <Button
+                Margin="0,0,8,8"
+                Padding="22,0"
+                BackgroundColor="#0B6E8F"
+                Clicked="OnAddClicked"
+                CornerRadius="28"
+                HeightRequest="56"
+                HorizontalOptions="End"
+                Text="Add"
+                TextColor="White"
+                VerticalOptions="End" />
+        </Grid>
+    </Grid>
+</ContentView>

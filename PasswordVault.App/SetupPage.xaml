@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PasswordVault.App.SetupPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Create vault">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label
+                Text="Create your vault"
+                FontSize="28"
+                FontAttributes="Bold" />
+            <Label
+                Text="If you forget this password your passwords cannot be recovered"
+                LineBreakMode="WordWrap" />
+            <Entry
+                x:Name="PasswordEntry"
+                Placeholder="New password"
+                IsPassword="True"
+                ReturnType="Next" />
+            <Entry
+                x:Name="ConfirmPasswordEntry"
+                Placeholder="Confirm password"
+                IsPassword="True"
+                ReturnType="Done" />
+            <Label
+                x:Name="ErrorLabel"
+                TextColor="Red"
+                IsVisible="False" />
+            <ActivityIndicator
+                x:Name="BusyIndicator"
+                IsVisible="False"
+                IsRunning="False" />
+            <Button
+                x:Name="CreateButton"
+                Text="Create vault"
+                Clicked="OnCreateClicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PasswordVault.App.EntryEditPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Add entry">
+    <VerticalStackLayout
+        Padding="24"
+        HorizontalOptions="Center"
+        Spacing="12"
+        VerticalOptions="Center">
+        <Label
+            FontSize="18"
+            Text="Entry editing will be added in Task 5."
+            HorizontalTextAlignment="Center" />
+    </VerticalStackLayout>
+</ContentPage>

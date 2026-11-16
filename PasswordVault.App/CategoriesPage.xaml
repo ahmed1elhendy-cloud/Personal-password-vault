@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PasswordVault.App.CategoriesPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Categories">
+    <Grid
+        Padding="20"
+        RowDefinitions="Auto,*"
+        RowSpacing="16">
+        <Button
+            Grid.Row="0"
+            BackgroundColor="#0B6E8F"
+            Clicked="OnAddClicked"
+            Text="Add category"
+            TextColor="White" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout
+                x:Name="CategoryList"
+                Spacing="10" />
+        </ScrollView>
+    </Grid>
+</ContentPage>
