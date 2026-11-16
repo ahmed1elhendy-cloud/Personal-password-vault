@@ -1,3 +1,5 @@
+using Microsoft.Maui.Devices;
+
 namespace PasswordVault.App;
 
 public partial class VaultListView : ContentView
@@ -9,12 +11,18 @@ public partial class VaultListView : ContentView
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = viewModel;
+        if (DeviceInfo.Platform == DevicePlatform.WinUI)
+        {
+            AddButton.IsVisible = false;
+        }
     }
 
     public event EventHandler? AddRequested;
     public event EventHandler<VaultEntrySelectedEventArgs>? EntrySelected;
 
     public void Refresh() => _viewModel.Refresh();
+
+    public void FocusSearch() => SearchEntry.Focus();
 
     private void OnCategoryClicked(object? sender, EventArgs e)
     {

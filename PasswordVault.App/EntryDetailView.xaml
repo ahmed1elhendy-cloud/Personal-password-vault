@@ -29,7 +29,10 @@
                     Text="Copy"
                     VerticalOptions="Center" />
             </Grid>
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+            <Grid
+                x:Name="PasswordRow"
+                ColumnDefinitions="*,Auto,Auto"
+                ColumnSpacing="6">
                 <VerticalStackLayout Spacing="4">
                     <Label FontSize="12" Text="PASSWORD" TextColor="#52666E" />
                     <Label x:Name="PasswordLabel" />

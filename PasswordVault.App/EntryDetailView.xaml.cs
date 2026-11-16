@@ -1,4 +1,10 @@
 using PasswordVault.Core;
+#if WINDOWS
+using Microsoft.Maui.Devices;
+using Windows.System;
+using WinUIKeyboardAccelerator = Microsoft.UI.Xaml.Input.KeyboardAccelerator;
+using WinUIKeyboardAcceleratorInvokedEventArgs = Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs;
+#endif
 
 namespace PasswordVault.App;
 
@@ -8,12 +14,22 @@ public partial class EntryDetailView : ContentView
     private readonly IClipboardService _clipboardService;
     private VaultEntry? _entry;
     private bool _isPasswordVisible;
+#if WINDOWS
+    private WinUIKeyboardAccelerator? _passwordCopyAccelerator;
+    private Microsoft.UI.Xaml.UIElement? _nativePasswordRow;
+#endif
 
     public EntryDetailView(VaultService vaultService, IClipboardService clipboardService)
     {
         InitializeComponent();
         _vaultService = vaultService;
         _clipboardService = clipboardService;
+#if WINDOWS
+        if (DeviceInfo.Platform == DevicePlatform.WinUI)
+        {
+            PasswordRow.HandlerChanged += OnPasswordRowHandlerChanged;
+        }
+#endif
     }
 
     public void LoadEntry(VaultEntry entry)
@@ -92,15 +108,47 @@ public partial class EntryDetailView : ContentView
         }
     }
 
-    private async void OnCopyPasswordClicked(object? sender, EventArgs e)
+    public Task CopyPasswordAsync()
     {
-        if (_entry is not null)
-        {
-            await _clipboardService.CopySecret(
+        return _entry is null
+            ? Task.CompletedTask
+            : _clipboardService.CopySecret(
                 _entry.Password,
                 _vaultService.Data.Settings.ClipboardClearSeconds);
-        }
     }
+
+    private async void OnCopyPasswordClicked(object? sender, EventArgs e)
+    {
+        await CopyPasswordAsync();
+    }
+
+#if WINDOWS
+    private void OnPasswordRowHandlerChanged(object? sender, EventArgs e)
+    {
+        if (PasswordRow.Handler?.PlatformView is not Microsoft.UI.Xaml.UIElement row
+            || ReferenceEquals(row, _nativePasswordRow))
+        {
+            return;
+        }
+
+        _nativePasswordRow = row;
+        _passwordCopyAccelerator = new WinUIKeyboardAccelerator
+        {
+            Key = VirtualKey.C,
+            Modifiers = VirtualKeyModifiers.Control
+        };
+        _passwordCopyAccelerator.Invoked += OnPasswordCopyAcceleratorInvoked;
+        row.KeyboardAccelerators.Add(_passwordCopyAccelerator);
+    }
+
+    private void OnPasswordCopyAcceleratorInvoked(
+        WinUIKeyboardAccelerator sender,
+        WinUIKeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        OnCopyPasswordClicked(this, EventArgs.Empty);
+    }
+#endif
 
     private void UpdatePasswordValue()
     {

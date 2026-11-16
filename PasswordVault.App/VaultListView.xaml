@@ -8,6 +8,7 @@
         RowDefinitions="Auto,Auto,*"
         RowSpacing="12">
         <SearchBar
+            x:Name="SearchEntry"
             Grid.Row="0"
             Placeholder="Search title, website, or username"
             Text="{Binding SearchText}" />
@@ -83,6 +84,7 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
             <Button
+                x:Name="AddButton"
                 Margin="0,0,8,8"
                 Padding="22,0"
                 BackgroundColor="#0B6E8F"
