@@ -1,5 +1,8 @@
 **/bin/
 **/obj/
+*.keystore
+*.jks
+GoogleConfig.cs
 .vs/
 *.user
 *.suo
