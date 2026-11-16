@@ -35,6 +35,10 @@
                 x:Name="CreateButton"
                 Text="Create vault"
                 Clicked="OnCreateClicked" />
+            <Button
+                x:Name="RestoreButton"
+                Text="Restore from Google Drive"
+                Clicked="OnRestoreFromGoogleClicked" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

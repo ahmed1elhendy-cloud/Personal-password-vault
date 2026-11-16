@@ -27,6 +27,7 @@ public sealed class VaultService
 
     public event EventHandler? Locked;
     public event EventHandler? Unlocked;
+    public event EventHandler? Saved;
 
     public bool HasVault => _store.Exists;
     public bool IsLocked => _key is null || _data is null;
@@ -89,6 +90,7 @@ public sealed class VaultService
     {
         var key = _key ?? throw new InvalidOperationException("The vault is locked.");
         _store.WriteAll(VaultCodec.Encrypt(Data, key));
+        Saved?.Invoke(this, EventArgs.Empty);
     }
 
     public void VerifyPassword(string password)
@@ -113,6 +115,7 @@ public sealed class VaultService
         var key = _key ?? throw new InvalidOperationException("The vault is locked.");
         _store.WriteAll(VaultCodec.Encrypt(data, key));
         _data = data;
+        Saved?.Invoke(this, EventArgs.Empty);
     }
 
     internal bool HasSameKeyParameters(ReadOnlySpan<byte> file)
@@ -180,6 +183,7 @@ public sealed class VaultService
             _key = newKey;
             newKey = null;
             oldKey.Dispose();
+            Saved?.Invoke(this, EventArgs.Empty);
         }
         finally
         {
@@ -200,6 +204,7 @@ public sealed class VaultService
             var restoredKey = key;
             key = null;
             SetUnlocked(data, restoredKey);
+            Saved?.Invoke(this, EventArgs.Empty);
         }
         finally
         {

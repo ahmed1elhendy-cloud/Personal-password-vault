@@ -16,6 +16,7 @@ public partial class App : Application
         _services = services;
         _vaultService = vaultService;
         _autoLockService = autoLockService;
+        _ = services.GetRequiredService<GoogleSyncCoordinator>();
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
@@ -32,8 +33,16 @@ public partial class App : Application
             MainThread.BeginInvokeOnMainThread(() =>
                 window.Page = _services.GetRequiredService<UnlockPage>());
 
+        var syncCoordinator = _services.GetRequiredService<GoogleSyncCoordinator>();
         window.Stopped += (_, _) => _autoLockService.OnBackgrounded();
-        window.Resumed += (_, _) => _autoLockService.OnResumed();
+        window.Resumed += (_, _) =>
+        {
+            _autoLockService.OnResumed();
+            if (!_vaultService.IsLocked)
+            {
+                syncCoordinator.ScheduleSync(TimeSpan.Zero);
+            }
+        };
         return window;
     }
 }

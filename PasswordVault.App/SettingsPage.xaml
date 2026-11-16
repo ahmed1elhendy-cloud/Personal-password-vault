@@ -29,5 +29,30 @@
             Clicked="OnImportBackupClicked"
             HorizontalOptions="Fill"
             Text="Import backup file" />
+        <Label
+            FontAttributes="Bold"
+            FontSize="20"
+            Text="Google Drive sync" />
+        <Label
+            x:Name="GoogleSyncStatusLabel"
+            Text="Sync is off." />
+        <Label
+            x:Name="LastSyncedLabel"
+            Text="Not synced yet." />
+        <Button
+            x:Name="GoogleSignInButton"
+            Clicked="OnGoogleSignInClicked"
+            HorizontalOptions="Fill"
+            Text="Sign in and turn on sync" />
+        <Button
+            x:Name="GoogleSyncNowButton"
+            Clicked="OnGoogleSyncNowClicked"
+            HorizontalOptions="Fill"
+            IsEnabled="False"
+            Text="Sync now" />
+        <ActivityIndicator
+            x:Name="GoogleSyncBusyIndicator"
+            IsVisible="False"
+            IsRunning="False" />
     </VerticalStackLayout>
 </ContentPage>

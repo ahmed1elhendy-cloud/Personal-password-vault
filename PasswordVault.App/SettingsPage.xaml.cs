@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
 using PasswordVault.Core;
 
@@ -8,11 +9,37 @@ namespace PasswordVault.App;
 public partial class SettingsPage : ContentPage
 {
     private readonly IServiceProvider _services;
+    private readonly GoogleAuthService _googleAuthService;
+    private readonly GoogleSyncCoordinator _syncCoordinator;
+    private bool _syncInProgress;
+    private bool _pendingPasswordPrompt;
 
-    public SettingsPage(IServiceProvider services)
+    public SettingsPage(
+        IServiceProvider services,
+        GoogleAuthService googleAuthService,
+        GoogleSyncCoordinator syncCoordinator)
     {
         InitializeComponent();
         _services = services;
+        _googleAuthService = googleAuthService;
+        _syncCoordinator = syncCoordinator;
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _syncCoordinator.StatusChanged += OnSyncStatusChanged;
+        UpdateSyncStatus();
+        if (_syncCoordinator.NeedsPassword)
+        {
+            _ = PromptForRemotePasswordAsync();
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        _syncCoordinator.StatusChanged -= OnSyncStatusChanged;
+        base.OnDisappearing();
     }
 
     private async void OnCategoriesClicked(object? sender, EventArgs e)
@@ -72,6 +99,167 @@ public partial class SettingsPage : ContentPage
         await Navigation.PushAsync(new BackupImportPage(
             _services.GetRequiredService<VaultService>(),
             buffer.ToArray()));
+    }
+
+    private async void OnGoogleSignInClicked(object? sender, EventArgs e)
+    {
+        SetGoogleSyncBusy(true);
+        try
+        {
+            await _googleAuthService.GetAccessTokenAsync([GoogleScopes.DriveAppData]);
+            _syncCoordinator.EnableSync();
+            await RunSyncAsync();
+        }
+        catch (GoogleAuthorizationException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (GoogleDriveException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (HttpRequestException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (OperationCanceledException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        finally
+        {
+            SetGoogleSyncBusy(false);
+            UpdateSyncStatus();
+        }
+    }
+
+    private async void OnGoogleSyncNowClicked(object? sender, EventArgs e)
+    {
+        SetGoogleSyncBusy(true);
+        try
+        {
+            await RunSyncAsync();
+        }
+        catch (GoogleAuthorizationException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (GoogleDriveException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (HttpRequestException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (OperationCanceledException)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+        finally
+        {
+            SetGoogleSyncBusy(false);
+            UpdateSyncStatus();
+        }
+    }
+
+    private async Task RunSyncAsync()
+    {
+        var outcome = await _syncCoordinator.SyncNowAsync();
+        if (outcome == SyncOutcome.NeedsPassword)
+        {
+            await PromptForRemotePasswordAsync();
+        }
+        else if (outcome == SyncOutcome.Failed)
+        {
+            await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+        }
+    }
+
+    private async Task PromptForRemotePasswordAsync()
+    {
+        if (_pendingPasswordPrompt)
+        {
+            return;
+        }
+
+        _pendingPasswordPrompt = true;
+        try
+        {
+            var password = await PasswordPromptPage.PromptAsync(
+                this,
+                "Other device's vault password",
+                "Enter the master password used by the other device.");
+            if (password is null)
+            {
+                return;
+            }
+
+            try
+            {
+                var outcome = await _syncCoordinator.SyncNowAsync(password);
+                if (outcome == SyncOutcome.Failed)
+                {
+                    await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+                }
+            }
+            catch (WrongPasswordException)
+            {
+                await DisplayAlertAsync("Google Drive", "The other device's master password is incorrect.", "OK");
+            }
+            catch (GoogleAuthorizationException)
+            {
+                await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+            }
+            catch (GoogleDriveException)
+            {
+                await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+            }
+            catch (HttpRequestException)
+            {
+                await DisplayAlertAsync("Google Drive", "Couldn't reach Google. Try again.", "OK");
+            }
+        }
+        finally
+        {
+            _pendingPasswordPrompt = false;
+            UpdateSyncStatus();
+        }
+    }
+
+    private void UpdateSyncStatus()
+    {
+        GoogleSyncStatusLabel.Text = _syncCoordinator.Status;
+        if (string.IsNullOrEmpty(GoogleSyncStatusLabel.Text))
+        {
+            GoogleSyncStatusLabel.Text = _syncCoordinator.IsEnabled ? "Google Drive sync is on." : "Sync is off.";
+        }
+
+        LastSyncedLabel.Text = _syncCoordinator.LastSynced is { } lastSynced
+            ? $"Last synced: {lastSynced.ToLocalTime():g}"
+            : "Not synced yet.";
+        GoogleSyncNowButton.IsEnabled = _syncCoordinator.IsEnabled && !_syncInProgress;
+        GoogleSignInButton.IsEnabled = !_syncInProgress;
+    }
+
+    private void SetGoogleSyncBusy(bool isBusy)
+    {
+        _syncInProgress = isBusy;
+        GoogleSyncBusyIndicator.IsVisible = isBusy;
+        GoogleSyncBusyIndicator.IsRunning = isBusy;
+        UpdateSyncStatus();
+    }
+
+    private void OnSyncStatusChanged(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            UpdateSyncStatus();
+            if (IsVisible && _syncCoordinator.NeedsPassword && !_syncInProgress)
+            {
+                _ = PromptForRemotePasswordAsync();
+            }
+        });
     }
 
 #if WINDOWS

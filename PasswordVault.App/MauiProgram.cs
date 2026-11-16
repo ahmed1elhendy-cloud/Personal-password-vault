@@ -14,6 +14,12 @@ public static class MauiProgram
             new FileVaultStore(Path.Combine(FileSystem.AppDataDirectory, "vault.pvlt")));
         builder.Services.AddSingleton<VaultService>();
         builder.Services.AddSingleton<AutoLockService>();
+        builder.Services.AddSingleton<HttpClient>();
+        builder.Services.AddSingleton<GoogleAuthService>();
+        builder.Services.AddSingleton<GoogleDriveFileStore>();
+        builder.Services.AddSingleton<ICloudFileStore>(services =>
+            services.GetRequiredService<GoogleDriveFileStore>());
+        builder.Services.AddSingleton<GoogleSyncCoordinator>();
         builder.Services.AddSingleton<IClipboardService, ClipboardService>();
         builder.Services.AddTransient<SetupPage>();
         builder.Services.AddTransient<UnlockPage>();
