@@ -101,6 +101,20 @@ public sealed class VaultService
         _ = VaultCodec.Decrypt(file, key);
     }
 
+    internal byte[] ExportFileBytes()
+    {
+        var key = _key ?? throw new InvalidOperationException("The vault is locked.");
+        return VaultCodec.Encrypt(Data, key);
+    }
+
+    internal void ReplaceDataAndSave(VaultData data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        var key = _key ?? throw new InvalidOperationException("The vault is locked.");
+        _store.WriteAll(VaultCodec.Encrypt(data, key));
+        _data = data;
+    }
+
     public void Lock()
     {
         if (IsLocked)

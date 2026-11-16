@@ -21,5 +21,13 @@
             Clicked="OnExportCsvClicked"
             HorizontalOptions="Fill"
             Text="Export CSV" />
+        <Button
+            Clicked="OnSaveBackupClicked"
+            HorizontalOptions="Fill"
+            Text="Save backup file" />
+        <Button
+            Clicked="OnImportBackupClicked"
+            HorizontalOptions="Fill"
+            Text="Import backup file" />
     </VerticalStackLayout>
 </ContentPage>
