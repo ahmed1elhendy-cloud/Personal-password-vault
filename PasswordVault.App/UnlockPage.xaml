@@ -25,6 +25,11 @@
             IsVisible="False"
             IsRunning="False" />
         <Button
+            x:Name="FingerprintButton"
+            Text="Unlock with fingerprint"
+            IsVisible="False"
+            Clicked="OnFingerprintUnlockClicked" />
+        <Button
             x:Name="UnlockButton"
             Text="Unlock"
             Clicked="OnUnlockClicked" />

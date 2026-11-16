@@ -71,7 +71,12 @@ public sealed class VaultServiceTests
     public void ChangePasswordWithWrongCurrentPasswordChangesNothing()
     {
         var store = new MemoryVaultStore();
-        var service = new VaultService(store, new FakeClock(DateTimeOffset.UtcNow), TestKdf);
+        var biometricUnlock = new FakeBiometricUnlock { IsEnabled = true };
+        var service = new VaultService(
+            store,
+            new FakeClock(DateTimeOffset.UtcNow),
+            TestKdf,
+            biometricUnlock);
         service.Create(Password);
         service.Data.Entries.Add(CreateEntry());
         service.Save();
@@ -84,6 +89,40 @@ public sealed class VaultServiceTests
         Assert.Equal(fileBefore, store.ReadAll());
         Assert.Equal(dataBefore, VaultJson.Serialize(service.Data));
         Assert.False(service.IsLocked);
+        Assert.Equal(0, biometricUnlock.DisableCount);
+    }
+
+    [Fact]
+    public void UnlockWithKeyRestoresVaultAndOwnsKey()
+    {
+        var service = CreateService();
+        service.Create(Password);
+        service.Data.Entries.Add(CreateEntry());
+        service.Save();
+        var key = service.VerifyPasswordAndGetKey(Password);
+        service.Lock();
+
+        service.UnlockWithKey(key);
+
+        Assert.Single(service.Data.Entries);
+        service.Lock();
+    }
+
+    [Fact]
+    public void ChangePasswordDisablesBiometricUnlock()
+    {
+        var biometricUnlock = new FakeBiometricUnlock { IsEnabled = true };
+        var service = new VaultService(
+            new MemoryVaultStore(),
+            new FakeClock(DateTimeOffset.UtcNow),
+            TestKdf,
+            biometricUnlock);
+        service.Create(Password);
+
+        service.ChangePassword(Password, NewPassword);
+
+        Assert.False(biometricUnlock.IsEnabled);
+        Assert.Equal(1, biometricUnlock.DisableCount);
     }
 
     [Fact]
@@ -185,5 +224,22 @@ public sealed class VaultServiceTests
     private sealed class FakeClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; set; } = utcNow;
+    }
+
+    private sealed class FakeBiometricUnlock : IBiometricUnlock
+    {
+        public bool IsAvailable { get; set; } = true;
+        public bool IsEnabled { get; set; }
+        public int DisableCount { get; private set; }
+
+        public Task EnableAsync(VaultKey key) => Task.CompletedTask;
+
+        public Task<VaultKey?> UnlockAsync() => Task.FromResult<VaultKey?>(null);
+
+        public void Disable()
+        {
+            IsEnabled = false;
+            DisableCount++;
+        }
     }
 }

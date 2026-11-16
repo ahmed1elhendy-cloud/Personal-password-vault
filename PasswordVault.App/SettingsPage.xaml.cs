@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
@@ -11,20 +12,27 @@ public partial class SettingsPage : ContentPage
     private readonly IServiceProvider _services;
     private readonly GoogleAuthService _googleAuthService;
     private readonly GmailBackupSender _gmailBackupSender;
+    private readonly IBiometricUnlock _biometricUnlock;
+    private readonly BiometricPolicy _biometricPolicy;
     private readonly GoogleSyncCoordinator _syncCoordinator;
     private bool _syncInProgress;
     private bool _pendingPasswordPrompt;
+    private bool _updatingBiometricSwitch;
 
     public SettingsPage(
         IServiceProvider services,
         GoogleAuthService googleAuthService,
         GmailBackupSender gmailBackupSender,
+        IBiometricUnlock biometricUnlock,
+        BiometricPolicy biometricPolicy,
         GoogleSyncCoordinator syncCoordinator)
     {
         InitializeComponent();
         _services = services;
         _googleAuthService = googleAuthService;
         _gmailBackupSender = gmailBackupSender;
+        _biometricUnlock = biometricUnlock;
+        _biometricPolicy = biometricPolicy;
         _syncCoordinator = syncCoordinator;
     }
 
@@ -33,6 +41,7 @@ public partial class SettingsPage : ContentPage
         base.OnAppearing();
         _syncCoordinator.StatusChanged += OnSyncStatusChanged;
         UpdateSyncStatus();
+        UpdateBiometricSettings();
         if (_syncCoordinator.NeedsPassword)
         {
             _ = PromptForRemotePasswordAsync();
@@ -141,6 +150,64 @@ public partial class SettingsPage : ContentPage
         {
             SetGoogleSyncBusy(false);
             UpdateSyncStatus();
+        }
+    }
+
+    private async void OnBiometricSwitchToggled(object? sender, ToggledEventArgs e)
+    {
+        if (_updatingBiometricSwitch)
+        {
+            return;
+        }
+
+        if (!e.Value)
+        {
+            _biometricUnlock.Disable();
+            UpdateBiometricSettings();
+            return;
+        }
+
+        BiometricSwitch.IsEnabled = false;
+        try
+        {
+            var password = await PasswordPromptPage.PromptAsync(
+                this,
+                "Enable fingerprint unlock",
+                "Enter your master password to enable fingerprint unlock.");
+            if (password is null)
+            {
+                return;
+            }
+
+            var vaultService = _services.GetRequiredService<VaultService>();
+            using var key = await Task.Run(() => vaultService.VerifyPasswordAndGetKey(password));
+            _biometricPolicy.RecordMasterPasswordEntry();
+            await _biometricUnlock.EnableAsync(key);
+        }
+        catch (WrongPasswordException)
+        {
+            await DisplayAlertAsync("Fingerprint unlock", "The master password is incorrect.", "OK");
+        }
+        catch (OperationCanceledException)
+        {
+            await DisplayAlertAsync("Fingerprint unlock", "Fingerprint setup was canceled.", "OK");
+        }
+        catch (IOException)
+        {
+            await DisplayAlertAsync("Fingerprint unlock", "The vault could not be read.", "OK");
+        }
+        catch (CryptographicException)
+        {
+            await DisplayAlertAsync("Fingerprint unlock", "Could not enable fingerprint unlock.", "OK");
+        }
+        catch (InvalidOperationException)
+        {
+            await DisplayAlertAsync("Fingerprint unlock", "Could not enable fingerprint unlock.", "OK");
+        }
+        finally
+        {
+            BiometricSwitch.IsEnabled = true;
+            UpdateBiometricSettings();
         }
     }
 
@@ -283,6 +350,15 @@ public partial class SettingsPage : ContentPage
             : "Not synced yet.";
         GoogleSyncNowButton.IsEnabled = _syncCoordinator.IsEnabled && !_syncInProgress;
         GoogleSignInButton.IsEnabled = !_syncInProgress;
+    }
+
+    private void UpdateBiometricSettings()
+    {
+        var isAvailable = _biometricUnlock.IsAvailable;
+        BiometricSettings.IsVisible = isAvailable;
+        _updatingBiometricSwitch = true;
+        BiometricSwitch.IsToggled = isAvailable && _biometricUnlock.IsEnabled;
+        _updatingBiometricSwitch = false;
     }
 
     private void SetGoogleSyncBusy(bool isBusy)

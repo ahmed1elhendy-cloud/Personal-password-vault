@@ -12,6 +12,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddSingleton<IVaultStore>(_ =>
             new FileVaultStore(Path.Combine(FileSystem.AppDataDirectory, "vault.pvlt")));
+        builder.Services.AddSingleton<BiometricPolicy>();
+#if ANDROID
+        builder.Services.AddSingleton<IBiometricUnlock, AndroidBiometricUnlock>();
+#elif WINDOWS
+        builder.Services.AddSingleton<IBiometricUnlock, UnavailableBiometricUnlock>();
+#endif
         builder.Services.AddSingleton<VaultService>();
         builder.Services.AddSingleton<AutoLockService>();
         builder.Services.AddSingleton<HttpClient>();

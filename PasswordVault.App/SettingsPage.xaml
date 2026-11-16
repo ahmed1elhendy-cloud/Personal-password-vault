@@ -33,6 +33,24 @@
             Clicked="OnEmailBackupClicked"
             HorizontalOptions="Fill"
             Text="Email backup to my Gmail" />
+        <VerticalStackLayout
+            x:Name="BiometricSettings"
+            IsVisible="False"
+            Spacing="8">
+            <Label
+                FontAttributes="Bold"
+                FontSize="20"
+                Text="Fingerprint unlock" />
+            <HorizontalStackLayout Spacing="12">
+                <Label
+                    Text="Unlock with fingerprint"
+                    VerticalOptions="Center" />
+                <Switch
+                    x:Name="BiometricSwitch"
+                    Toggled="OnBiometricSwitchToggled"
+                    VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
         <Label
             FontAttributes="Bold"
             FontSize="20"

@@ -7,15 +7,30 @@ public sealed class VaultService
     private readonly IVaultStore _store;
     private readonly IClock _clock;
     private readonly KdfParams? _createKdfParams;
+    private readonly IBiometricUnlock? _biometricUnlock;
     private VaultData? _data;
     private VaultKey? _key;
 
     public VaultService(IVaultStore store, IClock clock)
-        : this(store, clock, createKdfParams: null)
+        : this(store, clock, createKdfParams: null, biometricUnlock: null)
+    {
+    }
+
+    public VaultService(IVaultStore store, IClock clock, IBiometricUnlock? biometricUnlock)
+        : this(store, clock, createKdfParams: null, biometricUnlock: biometricUnlock)
     {
     }
 
     internal VaultService(IVaultStore store, IClock clock, KdfParams? createKdfParams)
+        : this(store, clock, createKdfParams, biometricUnlock: null)
+    {
+    }
+
+    internal VaultService(
+        IVaultStore store,
+        IClock clock,
+        KdfParams? createKdfParams,
+        IBiometricUnlock? biometricUnlock)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(clock);
@@ -23,6 +38,7 @@ public sealed class VaultService
         _store = store;
         _clock = clock;
         _createKdfParams = createKdfParams;
+        _biometricUnlock = biometricUnlock;
     }
 
     public event EventHandler? Locked;
@@ -86,6 +102,28 @@ public sealed class VaultService
         }
     }
 
+    public void UnlockWithKey(VaultKey key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        VaultKey? pendingKey = key;
+        try
+        {
+            if (!IsLocked)
+            {
+                throw new InvalidOperationException("The vault is already unlocked.");
+            }
+
+            var file = _store.ReadAll();
+            var data = VaultCodec.Decrypt(file, pendingKey);
+            SetUnlocked(data, pendingKey);
+            pendingKey = null;
+        }
+        finally
+        {
+            pendingKey?.Dispose();
+        }
+    }
+
     public void Save()
     {
         var key = _key ?? throw new InvalidOperationException("The vault is locked.");
@@ -95,12 +133,26 @@ public sealed class VaultService
 
     public void VerifyPassword(string password)
     {
+        using var key = VerifyPasswordAndGetKey(password);
+    }
+
+    public VaultKey VerifyPasswordAndGetKey(string password)
+    {
         ArgumentNullException.ThrowIfNull(password);
         EnsureUnlocked();
-
         var file = _store.ReadAll();
-        using var key = VaultCodec.OpenKey(password, file);
-        _ = VaultCodec.Decrypt(file, key);
+        VaultKey? key = VaultCodec.OpenKey(password, file);
+        try
+        {
+            _ = VaultCodec.Decrypt(file, key);
+            var verifiedKey = key;
+            key = null;
+            return verifiedKey;
+        }
+        finally
+        {
+            key?.Dispose();
+        }
     }
 
     internal byte[] ExportFileBytes()
@@ -142,6 +194,11 @@ public sealed class VaultService
         ArgumentNullException.ThrowIfNull(encryptedFile);
         var currentKey = _key ?? throw new InvalidOperationException("The vault is locked.");
 
+        if (adoptedKey is not null)
+        {
+            DisableBiometricUnlock();
+        }
+
         _store.WriteAll(encryptedFile);
         _data = data;
         if (adoptedKey is not null)
@@ -178,6 +235,7 @@ public sealed class VaultService
         VaultKey? newKey = CreateKey(newPassword);
         try
         {
+            DisableBiometricUnlock();
             _store.WriteAll(VaultCodec.Encrypt(Data, newKey));
             var oldKey = _key!;
             _key = newKey;
@@ -200,6 +258,7 @@ public sealed class VaultService
         try
         {
             var data = VaultCodec.Decrypt(file, key);
+            DisableBiometricUnlock();
             _store.WriteAll(file);
             var restoredKey = key;
             key = null;
@@ -237,6 +296,14 @@ public sealed class VaultService
         if (IsLocked)
         {
             throw new InvalidOperationException("The vault is locked.");
+        }
+    }
+
+    private void DisableBiometricUnlock()
+    {
+        if (_biometricUnlock?.IsEnabled == true)
+        {
+            _biometricUnlock.Disable();
         }
     }
 
