@@ -29,6 +29,10 @@
             Clicked="OnImportBackupClicked"
             HorizontalOptions="Fill"
             Text="Import backup file" />
+        <Button
+            Clicked="OnEmailBackupClicked"
+            HorizontalOptions="Fill"
+            Text="Email backup to my Gmail" />
         <Label
             FontAttributes="Bold"
             FontSize="20"

@@ -10,6 +10,7 @@ public partial class SettingsPage : ContentPage
 {
     private readonly IServiceProvider _services;
     private readonly GoogleAuthService _googleAuthService;
+    private readonly GmailBackupSender _gmailBackupSender;
     private readonly GoogleSyncCoordinator _syncCoordinator;
     private bool _syncInProgress;
     private bool _pendingPasswordPrompt;
@@ -17,11 +18,13 @@ public partial class SettingsPage : ContentPage
     public SettingsPage(
         IServiceProvider services,
         GoogleAuthService googleAuthService,
+        GmailBackupSender gmailBackupSender,
         GoogleSyncCoordinator syncCoordinator)
     {
         InitializeComponent();
         _services = services;
         _googleAuthService = googleAuthService;
+        _gmailBackupSender = gmailBackupSender;
         _syncCoordinator = syncCoordinator;
     }
 
@@ -99,6 +102,46 @@ public partial class SettingsPage : ContentPage
         await Navigation.PushAsync(new BackupImportPage(
             _services.GetRequiredService<VaultService>(),
             buffer.ToArray()));
+    }
+
+    private async void OnEmailBackupClicked(object? sender, EventArgs e)
+    {
+        SetGoogleSyncBusy(true);
+        try
+        {
+            var vault = _services.GetRequiredService<VaultService>();
+            var backupBytes = BackupService.ExportFileBytes(vault);
+            var emailAddress = await _gmailBackupSender.SendAsync(backupBytes);
+            await DisplayAlertAsync("Gmail backup", $"Backup sent to {emailAddress}", "OK");
+        }
+        catch (GmailSignInRequiredException)
+        {
+            await DisplayAlertAsync(
+                "Gmail backup",
+                "Google sign-in expired. Sign in again and retry the backup.",
+                "OK");
+        }
+        catch (GoogleAuthorizationException)
+        {
+            await DisplayAlertAsync("Gmail backup", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (GmailBackupException)
+        {
+            await DisplayAlertAsync("Gmail backup", "Couldn't send the backup. Try again.", "OK");
+        }
+        catch (HttpRequestException)
+        {
+            await DisplayAlertAsync("Gmail backup", "Couldn't reach Google. Try again.", "OK");
+        }
+        catch (OperationCanceledException)
+        {
+            await DisplayAlertAsync("Gmail backup", "Couldn't reach Google. Try again.", "OK");
+        }
+        finally
+        {
+            SetGoogleSyncBusy(false);
+            UpdateSyncStatus();
+        }
     }
 
     private async void OnGoogleSignInClicked(object? sender, EventArgs e)

@@ -16,6 +16,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AutoLockService>();
         builder.Services.AddSingleton<HttpClient>();
         builder.Services.AddSingleton<GoogleAuthService>();
+        builder.Services.AddSingleton<GmailBackupSender>();
         builder.Services.AddSingleton<GoogleDriveFileStore>();
         builder.Services.AddSingleton<ICloudFileStore>(services =>
             services.GetRequiredService<GoogleDriveFileStore>());

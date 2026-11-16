@@ -74,6 +74,21 @@ public sealed class MainActivity : MauiAppCompatActivity
         return accessToken;
     }
 
+    public async Task ClearGoogleAccessTokenAsync(string accessToken)
+    {
+        var request = ClearTokenRequest.InvokeBuilder()
+            .SetToken(accessToken)
+            .Build();
+        try
+        {
+            await Identity.GetAuthorizationClient(this).ClearToken(request).AsAsync();
+        }
+        catch (ApiException)
+        {
+            throw new GoogleAuthorizationException("Google authorization expired.");
+        }
+    }
+
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);

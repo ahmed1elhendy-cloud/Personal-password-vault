@@ -15,6 +15,8 @@ namespace PasswordVault.App;
 internal static class GoogleScopes
 {
     internal const string DriveAppData = "https://www.googleapis.com/auth/drive.appdata";
+    internal const string GmailSend = "https://www.googleapis.com/auth/gmail.send";
+    internal const string Email = "https://www.googleapis.com/auth/userinfo.email";
 }
 
 internal sealed class GoogleAuthorizationException : Exception
@@ -45,6 +47,7 @@ public sealed class GoogleAuthService
     }
 #else
     private readonly SemaphoreSlim _androidGate = new(1, 1);
+    private readonly Dictionary<string, string> _androidAccessTokens = new(StringComparer.Ordinal);
     public GoogleAuthService() { }
 #endif
 
@@ -60,13 +63,16 @@ public sealed class GoogleAuthService
             .OrderBy(scope => scope, StringComparer.Ordinal)
             .ToArray();
 #if ANDROID
+        var scopeKey = GetScopeKey(normalizedScopes);
         var activity = Platform.CurrentActivity as MainActivity
             ?? throw new GoogleAuthorizationException("Open the app to connect to Google.");
         await _androidGate.WaitAsync();
         try
         {
-            return await MainThread.InvokeOnMainThreadAsync(
+            var accessToken = await MainThread.InvokeOnMainThreadAsync(
                 () => activity.GetGoogleAccessTokenAsync(normalizedScopes));
+            _androidAccessTokens[scopeKey] = accessToken;
+            return accessToken;
         }
         catch (GoogleAuthorizationException)
         {
@@ -108,6 +114,83 @@ public sealed class GoogleAuthService
 #else
         throw new PlatformNotSupportedException("Google authorization is not configured for this platform.");
 #endif
+    }
+
+    public async Task<string> RefreshAccessTokenAsync(string[] scopes)
+    {
+        ArgumentNullException.ThrowIfNull(scopes);
+        if (scopes.Length == 0 || scopes.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException("At least one valid OAuth scope is required.", nameof(scopes));
+        }
+
+        var normalizedScopes = scopes.Distinct(StringComparer.Ordinal)
+            .OrderBy(scope => scope, StringComparer.Ordinal)
+            .ToArray();
+        var scopeKey = GetScopeKey(normalizedScopes);
+#if ANDROID
+        await _androidGate.WaitAsync();
+        try
+        {
+            if (_androidAccessTokens.TryGetValue(scopeKey, out var currentToken))
+            {
+                var activity = Platform.CurrentActivity as MainActivity
+                    ?? throw new GoogleAuthorizationException("Open the app to connect to Google.");
+                await MainThread.InvokeOnMainThreadAsync(
+                    () => activity.ClearGoogleAccessTokenAsync(currentToken));
+                _androidAccessTokens.Remove(scopeKey);
+            }
+        }
+        finally
+        {
+            _androidGate.Release();
+        }
+
+        return await GetAccessTokenAsync(normalizedScopes);
+#elif WINDOWS
+        await _gate.WaitAsync();
+        try
+        {
+            _accessTokens.Remove(scopeKey);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        try
+        {
+            return await GetWindowsAccessTokenAsync(normalizedScopes);
+        }
+        catch (GoogleAuthorizationException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GoogleAuthorizationException("Couldn't reach Google.", ex);
+        }
+        catch (SocketException ex)
+        {
+            throw new GoogleAuthorizationException("Couldn't start Google sign-in.", ex);
+        }
+        catch (HttpListenerException ex)
+        {
+            throw new GoogleAuthorizationException("Couldn't start Google sign-in.", ex);
+        }
+        catch (OperationCanceledException ex)
+        {
+            throw new GoogleAuthorizationException("Google sign-in timed out.", ex);
+        }
+#else
+        throw new PlatformNotSupportedException("Google authorization is not configured for this platform.");
+#endif
+    }
+
+    private static string GetScopeKey(IEnumerable<string> scopes)
+    {
+        var joined = string.Join('\n', scopes);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(joined)));
     }
 
 #if WINDOWS
@@ -300,12 +383,6 @@ public sealed class GoogleAuthService
         {
             throw new GoogleAuthorizationException("Google returned an invalid token response.", ex);
         }
-    }
-
-    private static string GetScopeKey(IEnumerable<string> scopes)
-    {
-        var joined = string.Join('\n', scopes);
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(joined)));
     }
 
     private static string CreateRandomString(int byteCount) =>
